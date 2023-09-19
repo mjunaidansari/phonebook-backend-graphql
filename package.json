@@ -4,13 +4,17 @@
   "description": "simple backend configuration for phonebook application using graphql",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+	"dev": "nodemon index.js"
   },
   "author": "Junaid Ansari",
   "license": "ISC",
   "dependencies": {
     "@apollo/server": "^4.9.3",
+    "dotenv": "^16.3.1",
     "graphql": "^16.8.0",
+    "mongoose": "^7.5.2",
+    "nodemon": "^3.0.1",
     "uuid": "^9.0.0"
   }
 }
