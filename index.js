@@ -116,46 +116,42 @@ const resolvers = {
 	Mutation: {
 		addPerson: async(root, args) => {
 			
-			// error handling
-			// if (persons.find(p => p.name === args.name)) {
-			// 	throw new GraphQLError('Name must be unique', {
-			// 		extensions: {
-			// 			code: 'BAD_USER_INPUT',
-			// 			invalidArgs: args.name
-			// 		}
-			// 	})
-			// }
-
-			// const person = {...args, id: uuid()}
-			// persons = persons.concat(person)
-			// return person
-
 			const person = new Person({args})
-			return person.save()
+			
+			try {
+				await person.save()
+			} catch (error) {
+				throw new GraphQLError('Saving Person Failed', {
+					extensions: {
+						code: 'BAD_USER_INPUT',
+						invalidArgs: args.name,
+						error
+					}
+				})
+			}
+
+			return person
 
 		},
 
 		editNumber: async(root, args) => {
 
-			// const person = persons.find(p => p.name === args.name)
-			
-			// if(!person){
-			// 	throw new GraphQLError('Person not found!', {
-			// 		extensions: {
-			// 			code: 'BAD_USER_INPUT',
-			// 			invalidArgs: args.name
-			// 		}
-			// 	})
-			// }
-
-			// const updatedPerson = { ...person, phone: args.phone }
-			// persons = persons.map(p => p.name === args.name? updatedPerson : p)
-			// return updatedPerson
-
 			const person = await Person.findOne({name: args.name})
 			person.phone = args.phone
-			return person.save()
 
+			try {
+				await person.save()
+			} catch (error) {
+				throw new GraphQLError('Saving Number Failed', {
+					extensions: {
+						code: 'BAD_USER_INPUT',
+						invalidArgs: args.name,
+						error
+					}
+				})
+			}
+
+			return person
 			
 		}
 	} 
