@@ -2,14 +2,20 @@ const { ApolloServer } = require('@apollo/server')
 const { startStandaloneServer } = require('@apollo/server/standalone')
 const { GraphQLError } = require('graphql')
 
+const typeDefs = require('./GraphQL/typeDefs')
+const resolvers = require('./GraphQL/resolvers')
+
 // for creating id
 const {v1: uuid} = require('uuid')
 
 const mongoose = require('mongoose')
 mongoose.set('strictQuery', false)
 const Person = require('./model/person')
+const User = require('./model/user')
 
 require('dotenv').config()
+
+const jwt = require('jsonwebtoken')
 
 const MONGODB_URI = process.env.MONGODB_URI
 
@@ -46,117 +52,6 @@ mongoose.connect(MONGODB_URI)
 // 	},
 //   ]
 
-const typeDefs = `
-
-  	type Address {
-		street: String!
-		city: String!
-	}
-
-  	type Person {
-		name: String!
-		phone: String
-		address: Address!
-		id: ID!
-	}
-
-	enum YesNo {
-		Yes
-		No
-	}
-
-	type Query {
-		personCount: Int!
-		allPersons(phone: YesNo): [Person!]!
-		findPerson(name: String!): Person
-	}
-
-	type Mutation {
-		addPerson(
-			name: String!
-			phone: String
-			street: String!
-			city: String!
-		): Person
-		editNumber(
-			name: String!
-			phone: String!
-		): Person
-	}
-
-`
-
-const resolvers = {
-	Query: {
-		personCount: async () => Person.collection.countDocuments(),
-		
-		allPersons: async(root, args) => {
-
-			if(!args.phone) 
-				return Person.find({})
-
-			// const byPhone = (person) => args.phone == 'Yes'? person.phone : !person.phone
-			return Person.find({phone: {$exists: args.phone === 'YES'}})
-
-		},
-		
-		findPerson: async(root, args) => Person.findOne({name: args.name}) 
-
-	},
-
-    Person: {
-		address: (root) => {
-			return {
-				street: root.street,
-				city: root.city
-			}
-		}
-	},
-
-	Mutation: {
-		addPerson: async(root, args) => {
-			
-			const person = new Person({args})
-			
-			try {
-				await person.save()
-			} catch (error) {
-				throw new GraphQLError('Saving Person Failed', {
-					extensions: {
-						code: 'BAD_USER_INPUT',
-						invalidArgs: args.name,
-						error
-					}
-				})
-			}
-
-			return person
-
-		},
-
-		editNumber: async(root, args) => {
-
-			const person = await Person.findOne({name: args.name})
-			person.phone = args.phone
-
-			try {
-				await person.save()
-			} catch (error) {
-				throw new GraphQLError('Saving Number Failed', {
-					extensions: {
-						code: 'BAD_USER_INPUT',
-						invalidArgs: args.name,
-						error
-					}
-				})
-			}
-
-			return person
-			
-		}
-	} 
-
-}
 
 const server = new ApolloServer({
 	typeDefs, // Contains the GraphQL Schema
@@ -165,6 +60,16 @@ const server = new ApolloServer({
 
 startStandaloneServer(server, {
 	listen: {port: 4000},
+	context: async ({req, res}) => {
+		const auth = req ? req.headers.authorization : null
+		if (auth && auth.startsWith('Bearer ')) {
+			const decodedToken = jwt.verify(
+				auth.substring(7), process.env.JWT_SECRET
+			)
+			const currentUser = await User.findById(decodedToken.id).populate('friends')
+			return {currentUser} // the object returned is given as third parameter to all resolvers
+		}
+	}
 }).then(({url}) => {
 	console.log(`Server ready at ${url}`)
 })
