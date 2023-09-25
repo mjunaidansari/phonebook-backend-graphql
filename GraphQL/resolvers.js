@@ -3,11 +3,15 @@ const {GraphQLError} = require('graphql')
 
 const jwt = require('jsonwebtoken')
 
+const { PubSub } = require('graphql-subscriptions')
+const pubsub = new PubSub()
+
 const User = require('../model/user')
 const Person = require('../model/person')
 
 const resolvers = {
 	Query: {
+
 		personCount: async () => Person.collection.countDocuments(),
 		
 		allPersons: async(root, args) => {
@@ -66,6 +70,8 @@ const resolvers = {
 				})
 			}
 
+			pubsub.publish('PERSON_ADDED', {personAdded: person})
+
 			return person
 
 		},
@@ -75,7 +81,7 @@ const resolvers = {
 			const isFriend = (person) => 
 				context.currentUser.friends.map(f => f._id.toString()).includes(person._id.toString())
 
-			if (!currentUser) {
+			if (!context.currentUser) {
 				throw new GraphQLError('Wrong Credentials', {
 					extensions: {
 						code: 'BAD_USER_INPUT'
@@ -84,7 +90,7 @@ const resolvers = {
 			}
 
 			const person = await Person.findOne({name: args.name})
-			if (!isFriend)
+			if (!isFriend(person))
 				context.currentUser.friends = context.currentUser.friends.concat(person)
 
 			await currentUser.save()
@@ -129,6 +135,8 @@ const resolvers = {
 					}
 				})
 			}
+			
+			return user
 
 		},
 
@@ -155,7 +163,15 @@ const resolvers = {
 
 		}
 
-	} 
+	},
+
+	Subscription: {
+		
+		personAdded: {
+			subscribe: () => pubsub.asyncIterator('PERSON_ADDED')
+		}
+
+	}
 
 }
 

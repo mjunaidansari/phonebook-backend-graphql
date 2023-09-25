@@ -57,6 +57,10 @@ const typeDefs = `
 		): Token
 	}
 
+	type Subscription {
+		personAdded: Person!
+	}
+
 `
 
 module.exports = typeDefs
