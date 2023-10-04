@@ -34,6 +34,7 @@ mongoose.connect(MONGODB_URI)
     console.log('error connection to MongoDB:', error.message)
   })
 
+mongoose.set('debug', true)
 
 // setup is now within a function
 const start = async () => {
@@ -73,6 +74,7 @@ const start = async () => {
     expressMiddleware(server, {
       context: async ({ req }) => {
         const auth = req ? req.headers.authorization : null
+		// console.log('authorization: ', auth)
         if (auth && auth.startsWith('Bearer ')) {
           const decodedToken = jwt.verify(auth.substring(7), process.env.JWT_SECRET)
           const currentUser = await User.findById(decodedToken.id).populate(
